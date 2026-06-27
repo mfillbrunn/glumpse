@@ -49,7 +49,8 @@ const BROWSE_JS = `
 
   // ── Cleanup (called when user exits preview) ──────────────────────────────
   window.__exitPreview = function() {
-    if (window.__timeInterval) { clearInterval(window.__timeInterval); window.__timeInterval = null; }
+    if (window.__timeInterval)  { clearInterval(window.__timeInterval);  window.__timeInterval  = null; }
+    if (window.__unmuteInterval){ clearInterval(window.__unmuteInterval); window.__unmuteInterval = null; }
     if (window.__previewVid) {
       window.__previewVid.pause();
       window.__previewVid.muted = true;
@@ -83,19 +84,20 @@ const BROWSE_JS = `
     // Default to theater (vertical) mode
     applyTheater(overlay, vid);
 
-    // Unmute: try immediately, then keep retrying for 3s in case YouTube re-mutes
+    // Unmute: keep retrying every 250ms for as long as the preview is open,
+    // because YouTube mobile re-mutes the video element continuously.
     function tryUnmute() {
       vid.muted = false;
       vid.volume = 1;
     }
     tryUnmute();
     vid.play().catch(function(){});
-    var unmuteCount = 0;
-    var unmuteInterval = setInterval(function() {
+    if (window.__unmuteInterval) clearInterval(window.__unmuteInterval);
+    window.__unmuteInterval = setInterval(function() {
+      if (!window.__previewVid) { clearInterval(window.__unmuteInterval); window.__unmuteInterval = null; return; }
       tryUnmute();
       if (vid.paused) vid.play().catch(function(){});
-      if (++unmuteCount > 15) clearInterval(unmuteInterval);
-    }, 200);
+    }, 250);
 
     window.__timeInterval = setInterval(function() {
       if (!window.__previewVid) return;
