@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "youtube-preview-app",
+    "name": "Glimpse",
     "slug": "youtube-preview-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FFC000"
     },
     "ios": {
       "supportsTablet": true
@@ -24,6 +24,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
