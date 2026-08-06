@@ -11,6 +11,25 @@ const THEATER_BTNS_TOP = VIDEO_TOP - 68;
 const BRAND = '#FFC000';
 const NAVY  = '#141B41';
 
+// ─── Pre-content injection — runs before YouTube JS loads ────────────────────
+// Spoofs the Page Visibility API so YouTube never sees the page as hidden,
+// which prevents it from pausing video when the screen locks or app backgrounds.
+const VISIBILITY_SPOOF_JS = `
+(function() {
+  try {
+    Object.defineProperty(document, 'visibilityState', { get: function() { return 'visible'; }, configurable: true });
+    Object.defineProperty(document, 'hidden',          { get: function() { return false;     }, configurable: true });
+    // Swallow visibilitychange and pagehide events before they reach YouTube's handlers
+    var _addEL = EventTarget.prototype.addEventListener;
+    EventTarget.prototype.addEventListener = function(type, fn, opts) {
+      if (type === 'visibilitychange' || type === 'pagehide') return;
+      return _addEL.call(this, type, fn, opts);
+    };
+  } catch(e) {}
+  true;
+})();
+`;
+
 // ─── Single browse + preview injection ───────────────────────────────────────
 // Everything happens in one WebView. On tap: center the thumbnail so YouTube
 // auto-starts the preview, then zoom it fullscreen.
@@ -779,7 +798,7 @@ export default function App() {
   const [sliding,         setSliding]         = useState(false);
   const [mode,            setMode]            = useState('theater');
 
-  const [premiumMode,    setPremiumMode]    = useState(true); // default ON
+  const [premiumMode,    setPremiumMode]    = useState(false); // disabled while testing background playback
   const [adVideoId,      setAdVideoId]      = useState(null);
   const [activeSource,   setActiveSource]   = useState('preview'); // 'preview' | 'real'
   const [adContainerVisible, setAdContainerVisible] = useState(false); // ad webview brought to front (button or real video showing)
@@ -965,18 +984,13 @@ export default function App() {
         {!previewing && (
           <View style={s.header}>
             <Image source={require('./assets/glumpse-logo.png')} style={s.headerLogo} resizeMode="contain" />
-            <TouchableOpacity onPress={() => setPremiumMode(p => !p)} style={s.premiumToggle} activeOpacity={0.7}>
-              <Text style={s.premiumLabel}>PREMIUM</Text>
-              <View style={[s.toggleTrack, premiumMode && s.toggleTrackOn]}>
-                <View style={[s.toggleThumb, premiumMode && s.toggleThumbOn]} />
-              </View>
-            </TouchableOpacity>
           </View>
         )}
         <WebView
           ref={searchRef}
           source={{ uri:'https://m.youtube.com' }}
           style={s.webview}
+          injectedJavaScriptBeforeContentLoaded={VISIBILITY_SPOOF_JS}
           injectedJavaScript={BROWSE_JS}
           onMessage={onMessage}
           javaScriptEnabled domStorageEnabled
